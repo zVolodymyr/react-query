@@ -466,6 +466,10 @@ export type MutationKey = string | readonly unknown[]
 
 export type MutationStatus = 'idle' | 'loading' | 'success' | 'error'
 
+export type MutationHashFunction<TMutationKey extends MutationKey> = (
+  queryKey: TMutationKey
+) => string
+
 export type MutationFunction<TData = unknown, TVariables = unknown> = (
   variables: TVariables
 ) => Promise<TData>
@@ -478,6 +482,7 @@ export interface MutationOptions<
 > {
   mutationFn?: MutationFunction<TData, TVariables>
   mutationKey?: MutationKey
+  mutationKeyHashFn?: QueryKeyHashFunction<MutationKey>
   variables?: TVariables
   onMutate?: (
     variables: TVariables
@@ -500,6 +505,7 @@ export interface MutationOptions<
   ) => Promise<unknown> | void
   retry?: RetryValue<TError>
   retryDelay?: RetryDelayValue<TError>
+  shareable?: boolean
   _defaulted?: boolean
 }
 

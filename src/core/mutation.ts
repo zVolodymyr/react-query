@@ -10,6 +10,7 @@ import { noop } from './utils'
 
 interface MutationConfig<TData, TError, TVariables, TContext> {
   mutationId: number
+  mutationHash: string | null
   mutationCache: MutationCache
   options: MutationOptions<TData, TError, TVariables, TContext>
   defaultOptions?: MutationOptions<TData, TError, TVariables, TContext>
@@ -84,6 +85,7 @@ export class Mutation<
   state: MutationState<TData, TError, TVariables, TContext>
   options: MutationOptions<TData, TError, TVariables, TContext>
   mutationId: number
+  mutationHash: string | null
 
   private observers: MutationObserver<TData, TError, TVariables, TContext>[]
   private mutationCache: MutationCache
@@ -95,6 +97,7 @@ export class Mutation<
       ...config.options,
     }
     this.mutationId = config.mutationId
+    this.mutationHash = config.mutationHash
     this.mutationCache = config.mutationCache
     this.observers = []
     this.state = config.state || getDefaultState()

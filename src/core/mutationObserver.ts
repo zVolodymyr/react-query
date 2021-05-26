@@ -7,6 +7,7 @@ import type {
   MutationObserverResult,
   MutationObserverOptions,
 } from './types'
+import { hashMutationKeyByOptions } from './utils'
 
 // TYPES
 
@@ -62,7 +63,43 @@ export class MutationObserver<
   setOptions(
     options?: MutationObserverOptions<TData, TError, TVariables, TContext>
   ) {
+    const prevOptions = this.options
+
     this.options = this.client.defaultMutationOptions(options)
+
+    if (prevOptions && prevOptions.shareable !== options?.shareable) {
+      throw new Error(`"shareable" can't be changed`)
+    }
+
+    this.updateSharedMutation()
+  }
+
+  updateSharedMutation() {
+    if (!this.options.shareable) {
+      return
+    }
+
+    if (!this.options.mutationKey) {
+      throw new Error(`Shareable mutation requires mutationKey to be set`)
+    }
+
+    const hash = hashMutationKeyByOptions(
+      this.options.mutationKey,
+      this.options
+    )
+    const mutation = this.client
+      .getMutationCache()
+      .get<TData, TError, TVariables, TContext>(hash)
+
+    if (this.currentMutation === mutation) {
+      return
+    }
+
+    this.currentMutation?.removeObserver(this);
+    this.currentMutation = mutation
+    this.currentMutation?.addObserver(this)
+
+    this.updateResult()
   }
 
   protected onUnsubscribe(): void {

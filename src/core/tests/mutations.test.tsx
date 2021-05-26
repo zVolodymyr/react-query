@@ -2,6 +2,7 @@ import { QueryClient } from '../..'
 import { mockConsoleError, queryKey, sleep } from '../../react/tests/utils'
 import { MutationState } from '../mutation'
 import { MutationObserver } from '../mutationObserver'
+import { MutationOptions } from '../types'
 
 describe('mutations', () => {
   let queryClient: QueryClient
@@ -299,5 +300,29 @@ describe('mutations', () => {
     expect(onMutate).not.toHaveBeenCalled()
     expect(onSuccess).toHaveBeenCalled()
     expect(onSettled).toHaveBeenCalled()
+  })
+
+  test('shareable mutation should share state', async () => {
+    const key = queryKey()
+
+    const ops: MutationOptions = {
+      mutationFn: async () => await sleep(10),
+      mutationKey: key,
+      shareable: true,
+    }
+
+    const obs1 = new MutationObserver(queryClient, ops)
+    const obs2 = new MutationObserver(queryClient, ops)
+
+    obs1.mutate()
+    obs2.updateSharedMutation()
+
+    expect(obs1.getCurrentResult()).toMatchObject({ status: 'loading' })
+    expect(obs2.getCurrentResult()).toMatchObject({ status: 'loading' })
+
+    await sleep(20)
+
+    expect(obs1.getCurrentResult()).toMatchObject({ status: 'success' })
+    expect(obs2.getCurrentResult()).toMatchObject({ status: 'success' })
   })
 })

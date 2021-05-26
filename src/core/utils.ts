@@ -257,6 +257,16 @@ export function hashQueryKeyByOptions<TQueryKey extends QueryKey = QueryKey>(
   return hashFn(queryKey)
 }
 
+export function hashMutationKeyByOptions<
+  TMutationKey extends MutationKey = MutationKey
+>(
+  mutationKey: TMutationKey,
+  options?: MutationOptions<any, any, any, any>
+): string {
+  const hashFn = options?.mutationKeyHashFn || hashQueryKey
+  return hashFn(mutationKey)
+}
+
 /**
  * Default query keys hash function.
  */

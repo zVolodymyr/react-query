@@ -2,7 +2,12 @@ import type { MutationOptions } from './types'
 import type { QueryClient } from './queryClient'
 import { notifyManager } from './notifyManager'
 import { Mutation, MutationState } from './mutation'
-import { matchMutation, MutationFilters, noop } from './utils'
+import {
+  hashMutationKeyByOptions,
+  matchMutation,
+  MutationFilters,
+  noop,
+} from './utils'
 import { Subscribable } from './subscribable'
 
 // TYPES
@@ -16,6 +21,10 @@ interface MutationCacheConfig {
   ) => void
 }
 
+interface MutationHashMap {
+  [hash: string]: Mutation<any, any, any, any>
+}
+
 type MutationCacheListener = (mutation?: Mutation) => void
 
 // CLASS
@@ -24,12 +33,14 @@ export class MutationCache extends Subscribable<MutationCacheListener> {
   config: MutationCacheConfig
 
   private mutations: Mutation<any, any, any, any>[]
+  private mutationsMap: MutationHashMap
   private mutationId: number
 
   constructor(config?: MutationCacheConfig) {
     super()
     this.config = config || {}
     this.mutations = []
+    this.mutationsMap = {}
     this.mutationId = 0
   }
 
@@ -38,9 +49,14 @@ export class MutationCache extends Subscribable<MutationCacheListener> {
     options: MutationOptions<TData, TError, TVariables, TContext>,
     state?: MutationState<TData, TError, TVariables, TContext>
   ): Mutation<TData, TError, TVariables, TContext> {
+    const mutationHash =
+      options.shareable && options.mutationKey
+        ? hashMutationKeyByOptions(options.mutationKey, options)
+        : null
     const mutation = new Mutation({
       mutationCache: this,
       mutationId: ++this.mutationId,
+      mutationHash,
       options: client.defaultMutationOptions(options),
       state,
       defaultOptions: options.mutationKey
@@ -49,6 +65,10 @@ export class MutationCache extends Subscribable<MutationCacheListener> {
     })
 
     this.add(mutation)
+
+    if (mutationHash) {
+      this.mutationsMap[mutationHash] = mutation
+    }
 
     return mutation
   }
@@ -60,6 +80,11 @@ export class MutationCache extends Subscribable<MutationCacheListener> {
 
   remove(mutation: Mutation<any, any, any, any>): void {
     this.mutations = this.mutations.filter(x => x !== mutation)
+
+    if (mutation.mutationHash) {
+      delete this.mutationsMap[mutation.mutationHash]
+    }
+
     mutation.cancel()
     this.notify(mutation)
   }
@@ -74,6 +99,12 @@ export class MutationCache extends Subscribable<MutationCacheListener> {
 
   getAll(): Mutation[] {
     return this.mutations
+  }
+
+  get<TData = unknown, TError = unknown, TVariables = any, TContext = unknown>(
+    hash: string
+  ): Mutation<TData, TError, TVariables, TContext> | undefined {
+    return this.mutationsMap[hash]
   }
 
   find<TData = unknown, TError = unknown, TVariables = any, TContext = unknown>(
