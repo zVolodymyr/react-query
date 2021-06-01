@@ -300,4 +300,39 @@ describe('mutations', () => {
     expect(onSuccess).toHaveBeenCalled()
     expect(onSettled).toHaveBeenCalled()
   })
+
+  test('should allow to resubscribe after start', async () => {
+    const mutation = new MutationObserver(queryClient, {
+      mutationFn: async (text: string) => {
+        await sleep(10)
+        return text
+      },
+      onMutate: text => text,
+      variables: 'todo',
+    })
+
+    const states: MutationState<string, unknown, string, string>[] = []
+
+    const unsubscribe = mutation.subscribe()
+
+    mutation.mutate()
+
+    unsubscribe()
+
+    mutation.subscribe(state => {
+      states.push(state)
+    })
+
+    await sleep(0)
+
+    expect(states[0]).toMatchObject({
+      status: 'loading',
+    })
+
+    await sleep(20)
+
+    expect(states[states.length - 1]).toMatchObject({
+      status: 'success',
+    })
+  })
 })

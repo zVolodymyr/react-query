@@ -65,6 +65,12 @@ export class MutationObserver<
     this.options = this.client.defaultMutationOptions(options)
   }
 
+  protected onSubscribe(): void {
+    if (this.currentMutation && this.listeners.length === 1) {
+      this.currentMutation.addObserver(this)
+    }
+  }
+
   protected onUnsubscribe(): void {
     if (!this.listeners.length) {
       this.currentMutation?.removeObserver(this)
